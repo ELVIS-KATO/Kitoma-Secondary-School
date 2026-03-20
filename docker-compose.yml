@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: kitoma_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: kitoma_accounts
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  backend:
+    build: ./backend
+    container_name: kitoma_backend
+    restart: always
+    environment:
+      DATABASE_URL: mysql+aiomysql://root:password@db:3306/kitoma_accounts
+      SECRET_KEY: 9e8c8a8b8c8d8e8f909192939495969798999a9b9c9d9e9f
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      SCHOOL_NAME: Kitoma Secondary School
+      SCHOOL_ADDRESS: P.O. Box 123, Kitoma
+      SCHOOL_PHONE: +256 700 000000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: kitoma_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
