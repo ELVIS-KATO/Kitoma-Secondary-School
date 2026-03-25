@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Filter, Download, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Filter, Download, FileSpreadsheet, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import TransactionTable from '@/components/transactions/TransactionTable';
 import client from '@/api/client';
 import { Transaction, PaginatedResponse, Category, Term } from '@/types';
@@ -69,9 +69,44 @@ export default function Inflows() {
     fetchTransactions();
   }, [page, search, categoryId, termId]);
 
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'add') {
+      openAddModal();
+    }
+  }, [searchParams]);
+  
+  const openAddModal = () => {
+    setEditingId(null);
+    setFormData({
+      payer_name: '',
+      amount: '',
+      category_id: '',
+      payment_method: 'cash',
+      description: '',
+      transaction_date: new Date().toISOString().split('T')[0],
+      term_id: '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (t: Transaction) => {
+    setEditingId(t.id);
+    setFormData({
+      payer_name: t.payer_name || '',
+      amount: t.amount.toString(),
+      category_id: t.category_id || '',
+      payment_method: t.payment_method || 'cash',
+      description: t.description || '',
+      transaction_date: t.transaction_date || new Date().toISOString().split('T')[0],
+      term_id: t.term_id || '',
+    });
+    setIsModalOpen(true);
+  };
+
   const handlePrintReceipt = async (id: string) => {
     try {
-      const response = await client.get(`/receipts/${id}/pdf`, { responseType: 'blob' });
+      const response = await client.get(`/receipts/transaction/${id}/pdf`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -97,6 +132,7 @@ export default function Inflows() {
   };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     payer_name: '',
@@ -113,28 +149,44 @@ export default function Inflows() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({
+      payer_name: '',
+      amount: '',
+      category_id: '',
+      payment_method: 'cash',
+      description: '',
+      transaction_date: new Date().toISOString().split('T')[0],
+      term_id: '',
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await client.post('/transactions/', {
+      const payload = {
         ...formData,
         amount: parseFloat(formData.amount),
         type: 'inflow',
-      });
-      toast.success('Inflow recorded successfully');
-      setIsModalOpen(false);
+        term_id: formData.term_id || undefined,
+        category_id: formData.category_id || undefined,
+      };
+      
+      if (editingId) {
+        await client.put(`/transactions/${editingId}`, payload);
+        toast.success('Inflow updated successfully');
+      } else {
+        const response = await client.post('/transactions/', payload);
+        toast.success('Inflow recorded successfully');
+        // Auto-print receipt for new inflows
+        handlePrintReceipt(response.data.id);
+      }
+      
+      closeModal();
       fetchTransactions();
-      // Reset form
-      setFormData({
-        payer_name: '',
-        amount: '',
-        category_id: '',
-        payment_method: 'cash',
-        description: '',
-        transaction_date: new Date().toISOString().split('T')[0],
-        term_id: '',
-      });
     } catch (error: any) {
       toast.error(error.response?.data?.detail || 'Failed to record inflow');
     } finally {
@@ -154,7 +206,7 @@ export default function Inflows() {
             <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
             Export CSV
           </Button>
-          <Button className="h-10 bg-indigo-600 hover:bg-indigo-700" onClick={() => setIsModalOpen(true)}>
+          <Button className="h-10 bg-indigo-600 hover:bg-indigo-700" onClick={openAddModal}>
             <Plus className="w-4 h-4 mr-2" />
             Add Inflow
           </Button>
@@ -167,8 +219,10 @@ export default function Inflows() {
           <Card className="w-full max-w-lg shadow-2xl border-slate-200">
             <CardHeader className="border-b border-slate-100">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-bold">Record New Inflow</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => setIsModalOpen(false)}>
+                <CardTitle className="text-xl font-bold">
+                  {editingId ? 'Edit Inflow' : 'Record New Inflow'}
+                </CardTitle>
+                <Button variant="ghost" size="icon" onClick={closeModal}>
                   <Plus className="w-5 h-5 rotate-45" />
                 </Button>
               </div>
@@ -180,7 +234,7 @@ export default function Inflows() {
                     <label className="text-sm font-medium text-slate-700">Payer Name</label>
                     <Input 
                       name="payer_name" 
-                      placeholder="e.g. John Doe / S.1 Blue" 
+                      placeholder="e.g. John Doe / S.1 North" 
                       required 
                       value={formData.payer_name}
                       onChange={handleInputChange}
@@ -252,9 +306,9 @@ export default function Inflows() {
                 </div>
               </CardContent>
               <div className="p-6 pt-0 border-t border-slate-100 flex justify-end space-x-3 mt-4">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
                 <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Save & Issue Receipt'}
+                  {isSubmitting ? 'Saving...' : (editingId ? 'Update Inflow' : 'Save & Issue Receipt')}
                 </Button>
               </div>
             </form>
@@ -269,7 +323,7 @@ export default function Inflows() {
             <div>
               <p className="text-emerald-600 text-xs font-bold uppercase tracking-wider">Total Filtered Inflows</p>
               <h3 className="text-2xl font-bold text-emerald-700 mt-1">
-                {formatCurrency(transactions.reduce((acc, curr) => acc + curr.amount, 0))}
+                {formatCurrency(transactions.reduce((acc, curr) => acc + Number(curr.amount), 0))}
               </h3>
             </div>
             <div className="p-2 bg-white rounded-lg text-emerald-600 shadow-sm">
@@ -293,7 +347,7 @@ export default function Inflows() {
             <div>
               <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Average Inflow</p>
               <h3 className="text-2xl font-bold text-slate-900 mt-1">
-                {total > 0 ? formatCurrency(transactions.reduce((acc, curr) => acc + curr.amount, 0) / (transactions.length || 1)) : 'UGX 0'}
+                {total > 0 ? formatCurrency(transactions.reduce((acc, curr) => acc + Number(curr.amount), 0) / (transactions.length || 1)) : 'UGX 0'}
               </h3>
             </div>
             <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
@@ -351,7 +405,7 @@ export default function Inflows() {
       <TransactionTable 
         transactions={transactions}
         isLoading={isLoading}
-        onEdit={(t) => console.log('Edit', t)}
+        onEdit={handleEdit}
         onDelete={handleDelete}
         onPrintReceipt={handlePrintReceipt}
       />

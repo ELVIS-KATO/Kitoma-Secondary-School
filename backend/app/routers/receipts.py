@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, date
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, or_
 from ..database import get_db
@@ -75,7 +76,7 @@ async def reprint_receipt(
         action="PRINT_RECEIPT",
         entity_type="receipt",
         entity_id=receipt.id,
-        metadata={"receipt_number": receipt.receipt_number}
+        details=jsonable_encoder({"receipt_number": receipt.receipt_number})
     )
     db.add(audit)
     
@@ -102,3 +103,24 @@ async def get_receipt_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f"inline; filename={filename}"}
     )
+
+@router.get("/transaction/{transaction_id}/pdf")
+async def get_receipt_pdf_by_transaction(
+    transaction_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(select(Receipt).filter(Receipt.transaction_id == transaction_id))
+    receipt = result.scalar_one_or_none()
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found for this transaction")
+        
+    pdf_buffer = await ReceiptService.generate_pdf(receipt, db)
+    filename = f"Receipt_{receipt.receipt_number}.pdf"
+    
+    return Response(
+        content=pdf_buffer.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename={filename}"}
+    )
+

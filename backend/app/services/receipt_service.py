@@ -4,6 +4,7 @@ from io import BytesIO
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
 from reportlab.lib.pagesizes import A5
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -25,12 +26,28 @@ class ReceiptService:
     @staticmethod
     async def generate_receipt_number(db: AsyncSession) -> str:
         year = datetime.now().year
-        # Count existing receipts for the year
-        query = select(func.count(Receipt.id)).filter(
+        # Get the highest current receipt number for the year to avoid duplicates
+        query = select(Receipt.receipt_number).filter(
             Receipt.receipt_number.like(f"KSS-{year}-%")
-        )
-        count = await db.scalar(query)
-        return f"KSS-{year}-{(count + 1):05d}"
+        ).order_by(Receipt.receipt_number.desc()).limit(1)
+        
+        last_number = await db.scalar(query)
+        
+        if last_number:
+            try:
+                # Extract the numeric part (e.g., KSS-2026-00029 -> 29)
+                last_count = int(last_number.split("-")[-1])
+                new_count = last_count + 1
+            except (ValueError, IndexError):
+                # Fallback if format is unexpected
+                query_count = select(func.count(Receipt.id)).filter(
+                    Receipt.receipt_number.like(f"KSS-{year}-%")
+                )
+                new_count = (await db.scalar(query_count)) + 1
+        else:
+            new_count = 1
+            
+        return f"KSS-{year}-{new_count:05d}"
 
     @staticmethod
     async def create_receipt(
@@ -77,9 +94,11 @@ class ReceiptService:
         elements.append(Spacer(1, 5))
         
         # Receipt Details
-        # Load transaction to get amount, etc.
+        # Load transaction with term to avoid lazy loading issues
         result = await db.execute(
-            select(Transaction).filter(Transaction.id == receipt.transaction_id)
+            select(Transaction)
+            .options(joinedload(Transaction.term))
+            .filter(Transaction.id == receipt.transaction_id)
         )
         transaction = result.scalar_one()
         

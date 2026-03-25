@@ -12,7 +12,7 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(100))
     entity_type: Mapped[str] = mapped_column(String(50))
     entity_id: Mapped[uuid.UUID] = mapped_column(nullable=True)
-    metadata: Mapped[dict] = mapped_column(JSON, nullable=True)
+    details: Mapped[dict] = mapped_column(JSON, nullable=True)
     ip_address: Mapped[str] = mapped_column(String(45), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
