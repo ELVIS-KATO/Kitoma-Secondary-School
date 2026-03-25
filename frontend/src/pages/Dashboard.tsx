@@ -7,7 +7,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Receipt as ReceiptIcon,
-  Plus
+  Plus,
+  FileText
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -139,7 +140,7 @@ export default function Dashboard() {
                 />
                 <Tooltip 
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(val: number) => [formatCurrency(val), '']}
+                  formatter={(val) => val == null ? ['', ''] : [formatCurrency(val as number), '']}
                 />
                 <Area 
                   type="monotone" 
@@ -170,7 +171,7 @@ export default function Dashboard() {
             <p className="text-sm text-slate-500">Top 5 expense categories</p>
           </CardHeader>
           <CardContent className="h-[350px] flex flex-col justify-center">
-            <ResponsiveContainer width="100%" height="250">
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={summary.top_outflow_categories}
@@ -186,7 +187,7 @@ export default function Dashboard() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(val: number) => formatCurrency(val)} />
+                <Tooltip formatter={(val) => val == null ? '' : formatCurrency(val as number)} />
                 <Legend 
                   verticalAlign="bottom" 
                   align="center"

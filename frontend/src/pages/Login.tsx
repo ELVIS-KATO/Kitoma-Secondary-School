@@ -63,8 +63,10 @@ export default function Login() {
         className="w-full max-w-md"
       >
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-3xl mb-4 shadow-lg">
-            KSS
+          <div className="w-10 h-10 rounded-full ring-2 ring-indigo-200 p-0.5">
+          <div className="w-full h-full rounded-full overflow-hidden">
+            <img src="/kitoma.jpg" className="w-full h-full object-cover" alt="" />
+          </div>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Kitoma Secondary School</h1>
           <p className="text-slate-500">Accounts Management System</p>

@@ -3,12 +3,14 @@ from datetime import date
 from decimal import Decimal
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc
 from ..database import get_db
 from ..models.transaction import Transaction, TransactionType, PaymentMethod
 from ..models.category import Category
 from ..models.term import Term
+from ..models.receipt import Receipt
 from ..models.user import User, UserRole
 from ..models.audit_log import AuditLog
 from ..schemas.transaction import Transaction as TransactionSchema, TransactionCreate, TransactionUpdate, PaginatedTransactions
@@ -88,7 +90,7 @@ async def create_transaction(
         action="CREATE_TRANSACTION",
         entity_type="transaction",
         entity_id=transaction.id,
-        metadata={"amount": float(transaction.amount), "type": transaction.type.value}
+        details=jsonable_encoder({"amount": transaction.amount, "type": transaction.type})
     )
     db.add(audit)
     
@@ -124,13 +126,26 @@ async def update_transaction(
     for field, value in update_data.items():
         setattr(transaction, field, value)
         
+    # Auto-generate receipt if type changed to INFLOW or if it's an INFLOW without a receipt
+    if transaction.type == TransactionType.INFLOW and not transaction.receipt_issued:
+        await ReceiptService.create_receipt(db, transaction, current_user.id)
+        transaction.receipt_issued = True
+    elif transaction.type == TransactionType.INFLOW and transaction.receipt_issued:
+        # Update receipt recipient if name changed
+        if "payer_name" in update_data:
+            # Need to load receipt to update it
+            result = await db.execute(select(Receipt).filter(Receipt.transaction_id == transaction.id))
+            receipt = result.scalar_one_or_none()
+            if receipt:
+                receipt.issued_to = update_data["payer_name"]
+        
     # Log Audit
     audit = AuditLog(
         user_id=current_user.id,
         action="UPDATE_TRANSACTION",
         entity_type="transaction",
         entity_id=transaction.id,
-        metadata=update_data
+        details=jsonable_encoder(update_data)
     )
     db.add(audit)
     

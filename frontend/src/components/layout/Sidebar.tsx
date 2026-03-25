@@ -31,9 +31,11 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-slate-300 flex flex-col z-50">
       <div className="p-6 flex items-center space-x-3">
-        <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xl">
-          KSS
+        <div className="w-10 h-10 rounded-full ring-2 ring-indigo-200 p-0.5">
+        <div className="w-full h-full rounded-full overflow-hidden">
+          <img src="/kitoma.jpg" className="w-full h-full object-cover" alt="Kitoma logo" />
         </div>
+      </div>
         <div>
           <h1 className="text-white font-bold text-sm leading-tight">Kitoma Secondary School</h1>
           <p className="text-xs text-slate-400">Accounts System</p>
