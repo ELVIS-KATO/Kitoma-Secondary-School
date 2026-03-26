@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, or_
+from sqlalchemy import select, desc, or_, func
 from ..database import get_db
 from ..models.receipt import Receipt
 from ..models.transaction import Transaction
@@ -27,7 +27,11 @@ async def list_receipts(
     date_to: Optional[date] = None,
     current_user: User = Depends(get_current_user)
 ):
-    query = select(Receipt).join(Transaction)
+    from sqlalchemy.orm import joinedload
+    # Use select(Receipt, Transaction) to get both entities clearly
+    query = select(Receipt, Transaction).join(Transaction, Receipt.transaction_id == Transaction.id).options(
+        joinedload(Receipt.issued_by_user)
+    )
     
     if search:
         query = query.filter(
@@ -43,7 +47,43 @@ async def list_receipts(
         
     query = query.order_by(desc(Receipt.issued_at))
     
-    return await paginate(db, query, page, size)
+    # Custom pagination logic
+    count_query = select(func.count()).select_from(query.subquery())
+    total = await db.scalar(count_query) or 0
+    
+    offset = (page - 1) * size
+    query = query.offset(offset).limit(size)
+    
+    result = await db.execute(query)
+    rows = result.all() # This will be list of (Receipt, Transaction) tuples
+    
+    items = []
+    for r, t in rows:
+        # Create a dict that matches the Receipt schema
+        receipt_dict = {
+            "id": r.id,
+            "receipt_number": r.receipt_number,
+            "transaction_id": r.transaction_id,
+            "issued_to": r.issued_to,
+            "issued_by": r.issued_by,
+            "issued_at": r.issued_at,
+            "printed_at": r.printed_at,
+            "issued_by_name": r.issued_by_user.name if r.issued_by_user else "Unknown",
+            "transaction_amount": float(t.amount) if t else 0.0,
+            "transaction_date": t.transaction_date.isoformat() if t else None,
+            "payment_method": t.payment_method.value if t else None
+        }
+        items.append(receipt_dict)
+    
+    pages = (total + size - 1) // size if total > 0 else 0
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }
 
 @router.get("/{id}", response_model=ReceiptSchema)
 async def get_receipt(
@@ -51,11 +91,34 @@ async def get_receipt(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    result = await db.execute(select(Receipt).filter(Receipt.id == id))
-    receipt = result.scalar_one_or_none()
-    if not receipt:
+    from sqlalchemy.orm import joinedload
+    result = await db.execute(
+        select(Receipt, Transaction)
+        .join(Transaction, Receipt.transaction_id == Transaction.id)
+        .options(
+            joinedload(Receipt.issued_by_user)
+        )
+        .filter(Receipt.id == id)
+    )
+    row = result.first()
+    if not row:
         raise HTTPException(status_code=404, detail="Receipt not found")
-    return receipt
+    
+    r, t = row
+    # Build the dictionary for the schema
+    return {
+        "id": r.id,
+        "receipt_number": r.receipt_number,
+        "transaction_id": r.transaction_id,
+        "issued_to": r.issued_to,
+        "issued_by": r.issued_by,
+        "issued_at": r.issued_at,
+        "printed_at": r.printed_at,
+        "issued_by_name": r.issued_by_user.name if r.issued_by_user else "Unknown",
+        "transaction_amount": float(t.amount) if t else 0.0,
+        "transaction_date": t.transaction_date.isoformat() if t else None,
+        "payment_method": t.payment_method.value if t else None
+    }
 
 @router.post("/{id}/reprint")
 async def reprint_receipt(

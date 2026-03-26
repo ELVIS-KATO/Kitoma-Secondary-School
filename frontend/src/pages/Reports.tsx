@@ -90,76 +90,84 @@ export default function Reports() {
     <div className="space-y-8 pb-8 report-container">
       <style>{`
         @media print {
-          /* Hide everything first */
-          body * {
-            visibility: hidden;
+          /* Reset layout for print */
+          body, html {
+            background: white !important;
             margin: 0 !important;
             padding: 0 !important;
-          }
-          
-          /* Only show the report content and its parents */
-          .report-content,
-          .report-content * {
-            visibility: visible !important;
-          }
-
-          /* Ensure the container itself is positioned correctly */
-          .report-content {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
             height: auto !important;
-            margin: 0 !important;
-            padding: 1cm !important;
-            border: none !important;
-            box-shadow: none !important;
-            display: block !important;
-            background: white !important;
             overflow: visible !important;
           }
 
-          /* Explicitly hide the UI elements */
-          .no-print, 
-          nav, 
-          header, 
-          aside,
-          button,
-          .action-bar,
-          .report-container > div:first-child {
+          /* Hide sidebar and topbar (already handled by no-print but for safety) */
+          .no-print, nav, aside, header, .sidebar, .topbar {
             display: none !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
           }
 
-          /* Chart visibility fix */
+          /* Reset main content container */
+          .ml-64 {
+            margin-left: 0 !important;
+          }
+          
+          .h-screen {
+            height: auto !important;
+          }
+          
+          main {
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: visible !important;
+            display: block !important;
+          }
+
+          /* Target only the report content */
+          .report-content {
+            position: relative !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 1.5cm !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: white !important;
+            display: block !important;
+          }
+
+          /* Ensure all text is black for printing */
+          .report-content * {
+            color: black !important;
+          }
+
+          /* Charts must stay colored but visible */
           .recharts-responsive-container {
             width: 100% !important;
-            height: 350px !important;
+            height: 300px !important;
             display: block !important;
-            visibility: visible !important;
           }
           
           .recharts-surface {
-            visibility: visible !important;
-          }
-
-          /* Table and section management */
-          .report-section {
-            page-break-inside: avoid !important;
-            margin-bottom: 20px !important;
             display: block !important;
           }
-          
+
+          /* Page breaks */
+          .report-section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 2rem !important;
+          }
+
           table {
-            width: 100% !important;
             page-break-inside: auto !important;
+            width: 100% !important;
           }
           
           tr {
             page-break-inside: avoid !important;
             page-break-after: auto !important;
+          }
+
+          /* Hide UI action buttons */
+          button, .action-bar {
+            display: none !important;
           }
         }
       `}</style>

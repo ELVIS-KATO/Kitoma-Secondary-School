@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, transactions, reports, receipts, categories, terms, dashboard, users
+from .routers import auth, transactions, reports, receipts, categories, terms, dashboard, users, settings as settings_router
 from .database import engine, Base
 from .config import settings
 
@@ -28,6 +28,7 @@ app.include_router(categories.router, prefix="/api")
 app.include_router(terms.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
+app.include_router(settings_router.router, prefix="/api")
 
 @app.get("/")
 async def root():

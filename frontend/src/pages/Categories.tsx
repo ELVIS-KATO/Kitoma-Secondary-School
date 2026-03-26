@@ -7,7 +7,8 @@ import {
   MoreVertical, 
   Edit, 
   Trash,
-  Info
+  Info,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -19,6 +20,14 @@ import { formatCurrency } from '@/utils/formatters';
 export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'inflow' as 'inflow' | 'outflow',
+    description: '',
+  });
 
   const fetchCategories = async () => {
     setIsLoading(true);
@@ -36,14 +45,64 @@ export default function Categories() {
     fetchCategories();
   }, []);
 
+  const openAddModal = () => {
+    setEditingId(null);
+    setFormData({
+      name: '',
+      type: 'inflow',
+      description: '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (cat: Category) => {
+    setEditingId(cat.id);
+    setFormData({
+      name: cat.name,
+      type: cat.type,
+      description: cat.description || '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (editingId) {
+        await client.put(`/categories/${editingId}`, formData);
+        toast.success('Category updated successfully');
+      } else {
+        await client.post('/categories/', formData);
+        toast.success('Category created successfully');
+      }
+      closeModal();
+      fetchCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to save category');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
+    if (window.confirm('Are you sure you want to delete this category? It will only work if there are no transactions attached.')) {
       try {
         await client.delete(`/categories/${id}`);
         toast.success('Category deleted');
         fetchCategories();
       } catch (error: any) {
-        toast.error(error.response?.data?.detail || 'Failed to delete category');
+        toast.error(error.response?.data?.detail || 'Failed to delete category. Ensure it has no transactions.');
       }
     }
   };
@@ -58,11 +117,73 @@ export default function Categories() {
           <h1 className="text-2xl font-bold text-slate-900">Transaction Categories</h1>
           <p className="text-slate-500 text-sm">Organize and track your finances by category</p>
         </div>
-        <Button className="h-10 bg-indigo-600 hover:bg-indigo-700">
+        <Button className="h-10 bg-indigo-600 hover:bg-indigo-700" onClick={openAddModal}>
           <Plus className="w-4 h-4 mr-2" />
           Add Category
         </Button>
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl border-slate-200">
+            <CardHeader className="border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold">
+                  {editingId ? 'Edit Category' : 'Add New Category'}
+                </CardTitle>
+                <Button variant="ghost" size="icon" onClick={closeModal}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+              <CardContent className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Category Name</label>
+                  <input 
+                    name="name" 
+                    className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="e.g. Tuition Fees, Stationery" 
+                    required 
+                    value={formData.name}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Category Type</label>
+                  <select 
+                    name="type"
+                    className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                    value={formData.type}
+                    onChange={handleInputChange}
+                  >
+                    <option value="inflow">Inflow (Income)</option>
+                    <option value="outflow">Outflow (Expense)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Description</label>
+                  <textarea 
+                    name="description"
+                    className="w-full h-24 px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Brief description of what this category covers..."
+                    value={formData.description}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </CardContent>
+              <div className="p-6 pt-0 flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
+                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : (editingId ? 'Update Category' : 'Create Category')}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Inflow Categories */}
@@ -78,7 +199,7 @@ export default function Categories() {
               <EmptyState />
             ) : (
               inflowCats.map(cat => (
-                <CategoryCard key={cat.id} category={cat} onDelete={handleDelete} />
+                <CategoryCard key={cat.id} category={cat} onDelete={handleDelete} onEdit={handleEdit} />
               ))
             )}
           </div>
@@ -97,7 +218,7 @@ export default function Categories() {
               <EmptyState />
             ) : (
               outflowCats.map(cat => (
-                <CategoryCard key={cat.id} category={cat} onDelete={handleDelete} />
+                <CategoryCard key={cat.id} category={cat} onDelete={handleDelete} onEdit={handleEdit} />
               ))
             )}
           </div>
@@ -107,7 +228,7 @@ export default function Categories() {
   );
 }
 
-function CategoryCard({ category, onDelete }: { category: Category, onDelete: (id: string) => void }) {
+function CategoryCard({ category, onDelete, onEdit }: { category: Category, onDelete: (id: string) => void, onEdit: (cat: Category) => void }) {
   return (
     <Card className="shadow-sm border-slate-200 hover:border-indigo-200 transition-colors group">
       <CardContent className="p-6">
@@ -134,7 +255,7 @@ function CategoryCard({ category, onDelete }: { category: Category, onDelete: (i
           </div>
           
           <div className="flex flex-col space-y-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600" onClick={() => onEdit(category)}>
               <Edit className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600" onClick={() => onDelete(category.id)}>

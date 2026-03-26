@@ -8,10 +8,12 @@ import {
   MoreVertical, 
   Edit, 
   Trash,
-  Info
+  Info,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
 import client from '@/api/client';
 import { Term } from '@/types';
 import { toast } from 'react-hot-toast';
@@ -20,6 +22,16 @@ import { formatCurrency, formatDate } from '@/utils/formatters';
 export default function Terms() {
   const [terms, setTerms] = useState<Term[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    year: new Date().getFullYear(),
+    term_number: 1,
+    start_date: '',
+    end_date: '',
+  });
 
   const fetchTerms = async () => {
     setIsLoading(true);
@@ -36,6 +48,75 @@ export default function Terms() {
   useEffect(() => {
     fetchTerms();
   }, []);
+
+  const openAddModal = () => {
+    setEditingId(null);
+    setFormData({
+      name: '',
+      year: new Date().getFullYear(),
+      term_number: 1,
+      start_date: '',
+      end_date: '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (term: Term) => {
+    setEditingId(term.id);
+    setFormData({
+      name: term.name,
+      year: term.year,
+      term_number: term.term_number,
+      start_date: term.start_date,
+      end_date: term.end_date,
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: (name === 'year' || name === 'term_number') ? parseInt(value) : value 
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (editingId) {
+        await client.put(`/terms/${editingId}`, formData);
+        toast.success('Term updated successfully');
+      } else {
+        await client.post('/terms/', formData);
+        toast.success('Term created successfully');
+      }
+      closeModal();
+      fetchTerms();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to save term');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this term? It will only work if there are no transactions attached.')) {
+      try {
+        await client.delete(`/terms/${id}`);
+        toast.success('Term deleted');
+        fetchTerms();
+      } catch (error: any) {
+        toast.error(error.response?.data?.detail || 'Failed to delete term. Ensure it has no transactions.');
+      }
+    }
+  };
 
   const handleActivate = async (id: string) => {
     try {
@@ -62,11 +143,97 @@ export default function Terms() {
           <h1 className="text-2xl font-bold text-slate-900">School Terms</h1>
           <p className="text-slate-500 text-sm">Manage academic terms and their financial periods</p>
         </div>
-        <Button className="h-10 bg-indigo-600 hover:bg-indigo-700">
+        <Button className="h-10 bg-indigo-600 hover:bg-indigo-700" onClick={openAddModal}>
           <Plus className="w-4 h-4 mr-2" />
           Create New Term
         </Button>
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl border-slate-200">
+            <CardHeader className="border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold">
+                  {editingId ? 'Edit Term' : 'Create New Term'}
+                </CardTitle>
+                <Button variant="ghost" size="icon" onClick={closeModal}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+              <CardContent className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Term Name</label>
+                  <Input 
+                    name="name" 
+                    placeholder="e.g. Term One, First Term" 
+                    required 
+                    value={formData.name}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Year</label>
+                    <Input 
+                      name="year" 
+                      type="number" 
+                      required 
+                      value={formData.year}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Term Number</label>
+                    <select 
+                      name="term_number"
+                      className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                      value={formData.term_number}
+                      onChange={handleInputChange}
+                    >
+                      <option value={1}>Term 1</option>
+                      <option value={2}>Term 2</option>
+                      <option value={3}>Term 3</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Start Date</label>
+                    <Input 
+                      name="start_date" 
+                      type="date" 
+                      required 
+                      value={formData.start_date}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">End Date</label>
+                    <Input 
+                      name="end_date" 
+                      type="date" 
+                      required 
+                      value={formData.end_date}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+              <div className="p-6 pt-0 flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
+                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : (editingId ? 'Update Term' : 'Create Term')}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
 
       <div className="space-y-12">
         {years.length === 0 && !isLoading ? (
@@ -84,7 +251,7 @@ export default function Terms() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {termsByYear[year].map(term => (
-                <TermCard key={term.id} term={term} onActivate={handleActivate} />
+                <TermCard key={term.id} term={term} onActivate={handleActivate} onEdit={handleEdit} onDelete={handleDelete} />
               ))}
             </div>
           </div>
@@ -94,7 +261,9 @@ export default function Terms() {
   );
 }
 
-function TermCard({ term, onActivate }: { term: Term, onActivate: (id: string) => void }) {
+function TermCard({ term, onActivate, onEdit, onDelete }: { term: Term, onActivate: (id: string) => void, onEdit: (term: Term) => void, onDelete: (id: string) => void }) {
+  const [showMenu, setShowMenu] = useState(false);
+
   return (
     <Card className={`shadow-sm border-2 transition-all ${term.is_active ? 'border-indigo-600 bg-indigo-50/10' : 'border-slate-200 hover:border-slate-300'}`}>
       <CardContent className="p-6">
@@ -114,9 +283,29 @@ function TermCard({ term, onActivate }: { term: Term, onActivate: (id: string) =
             </p>
           </div>
           
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
-            <MoreVertical className="w-4 h-4" />
-          </Button>
+          <div className="relative">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400" onClick={() => setShowMenu(!showMenu)}>
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+            {showMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-slate-200 z-50">
+                <div className="py-1">
+                  <button 
+                    className="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    onClick={() => { onEdit(term); setShowMenu(false); }}
+                  >
+                    <Edit className="w-4 h-4 mr-2" /> Edit Term
+                  </button>
+                  <button 
+                    className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    onClick={() => { onDelete(term.id); setShowMenu(false); }}
+                  >
+                    <Trash className="w-4 h-4 mr-2" /> Delete Term
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4 mb-6">

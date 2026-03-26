@@ -54,6 +54,25 @@ async def create_term(
     await db.refresh(term)
     return term
 
+@router.delete("/{id}")
+async def delete_term(
+    id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_accountant)
+):
+    term = await db.get(Term, id)
+    if not term:
+        raise HTTPException(status_code=404, detail="Term not found")
+        
+    # Check if has transactions
+    count = await db.scalar(select(func.count(Transaction.id)).filter(Transaction.term_id == id))
+    if count > 0:
+        raise HTTPException(status_code=400, detail="Cannot delete term that has transactions")
+        
+    await db.delete(term)
+    await db.commit()
+    return {"status": "success"}
+
 @router.put("/{id}", response_model=TermSchema)
 async def update_term(
     id: uuid.UUID,
