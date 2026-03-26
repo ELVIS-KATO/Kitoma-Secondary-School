@@ -1,3 +1,4 @@
+
 # Kitoma Secondary School Accounts Management System
 
 A production-ready, full-stack school accounts management system built with React, FastAPI, and MySQL.
@@ -28,7 +29,7 @@ A production-ready, full-stack school accounts management system built with Reac
 - Docker and Docker Compose
 - Node.js 20+ (for local development)
 - Python 3.11+ (for local development)
-- MySQL 8 (for local development)
+- MySQL 8 (for local development) Better Xampp
 - Rust (for local development, required for compiling reportlab)
 
 ### Quick Start with Docker
@@ -82,5 +83,5 @@ A production-ready, full-stack school accounts management system built with Reac
 - **Viewer**: `viewer@kitoma.ac.ug` / `Viewer@1234`
 
 ## License
-
+Copyright © katoelvis 2026 || 
 Copyright © 2026 Kitoma Secondary School. All rights reserved.
