@@ -87,8 +87,83 @@ export default function Reports() {
   };
 
   return (
-    <div className="space-y-8 pb-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 pb-8 report-container">
+      <style>{`
+        @media print {
+          /* Hide everything first */
+          body * {
+            visibility: hidden;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          /* Only show the report content and its parents */
+          .report-content,
+          .report-content * {
+            visibility: visible !important;
+          }
+
+          /* Ensure the container itself is positioned correctly */
+          .report-content {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 1cm !important;
+            border: none !important;
+            box-shadow: none !important;
+            display: block !important;
+            background: white !important;
+            overflow: visible !important;
+          }
+
+          /* Explicitly hide the UI elements */
+          .no-print, 
+          nav, 
+          header, 
+          aside,
+          button,
+          .action-bar,
+          .report-container > div:first-child {
+            display: none !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* Chart visibility fix */
+          .recharts-responsive-container {
+            width: 100% !important;
+            height: 350px !important;
+            display: block !important;
+            visibility: visible !important;
+          }
+          
+          .recharts-surface {
+            visibility: visible !important;
+          }
+
+          /* Table and section management */
+          .report-section {
+            page-break-inside: avoid !important;
+            margin-bottom: 20px !important;
+            display: block !important;
+          }
+          
+          table {
+            width: 100% !important;
+            page-break-inside: auto !important;
+          }
+          
+          tr {
+            page-break-inside: avoid !important;
+            page-break-after: auto !important;
+          }
+        }
+      `}</style>
+      <div className="flex items-center justify-between no-print">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Financial Reports</h1>
           <p className="text-slate-500 text-sm">Generate and export detailed financial statements</p>
@@ -96,7 +171,7 @@ export default function Reports() {
       </div>
 
       {/* Configuration Panel */}
-      <Card className="shadow-sm border-slate-200">
+      <Card className="shadow-sm border-slate-200 no-print">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             <div className="space-y-2">
@@ -153,7 +228,7 @@ export default function Reports() {
       {report && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Action Bar */}
-          <div className="flex items-center justify-end space-x-3">
+          <div className="flex items-center justify-end space-x-3 no-print">
             <Button variant="outline" className="border-slate-200" onClick={() => window.print()}>
               <Printer className="w-4 h-4 mr-2" /> Print
             </Button>
@@ -166,7 +241,7 @@ export default function Reports() {
           </div>
 
           {/* Report Content (Printable) */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-8">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-8 report-content">
             {/* Header */}
             <div className="flex justify-between items-start border-b border-slate-100 pb-8 mb-8">
               <div className="flex items-center space-x-4">
@@ -187,35 +262,53 @@ export default function Reports() {
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 report-section">
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Opening Balance</p>
-                <p className="text-xl font-bold text-slate-900">{formatCurrency(report.opening_balance)}</p>
+                <p className="text-xl font-bold text-slate-900">{formatCurrency(Number(report.opening_balance))}</p>
               </div>
               <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
                 <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Total Inflows</p>
-                <p className="text-xl font-bold text-emerald-700">{formatCurrency(report.summary.total_inflows)}</p>
+                <p className="text-xl font-bold text-emerald-700">{formatCurrency(Number(report.summary.total_inflows))}</p>
               </div>
               <div className="p-4 bg-red-50 rounded-xl border border-red-100">
                 <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">Total Outflows</p>
-                <p className="text-xl font-bold text-red-700">{formatCurrency(report.summary.total_outflows)}</p>
+                <p className="text-xl font-bold text-red-700">{formatCurrency(Number(report.summary.total_outflows))}</p>
               </div>
               <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
                 <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">Closing Balance</p>
-                <p className="text-xl font-bold text-indigo-700">{formatCurrency(report.closing_balance)}</p>
+                <p className="text-xl font-bold text-indigo-700">{formatCurrency(Number(report.closing_balance))}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 report-section">
               {/* Category Breakdown Chart */}
-              <div className="p-6 border border-slate-100 rounded-xl">
+              <div className="p-6 border border-slate-100 rounded-xl min-h-[300px]">
                 <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6">Category Breakdown</h4>
-                <div className="h-64">
+                <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={report.category_breakdown} layout="vertical">
+                    <BarChart 
+                      data={report.category_breakdown} 
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" hide />
-                      <YAxis dataKey="category_name" type="category" width={100} tick={{ fontSize: 10 }} />
-                      <Tooltip formatter={(val: number) => formatCurrency(val)} />
+                      <YAxis 
+                        dataKey="category_name" 
+                        type="category" 
+                        width={120} 
+                        tick={{ fontSize: 10, fontWeight: 500 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip 
+                        formatter={(value: number | string | readonly (string | number)[] | undefined) => {
+                          const num = Array.isArray(value) ? Number(value[0]) : Number(value);
+                          return formatCurrency(Number.isNaN(num) ? 0 : num);
+                        }}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      />
                       <Bar dataKey="total_amount" radius={[0, 4, 4, 0]} barSize={20}>
                         {report.category_breakdown.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -237,7 +330,7 @@ export default function Reports() {
                         <span className="text-sm font-medium text-slate-700">{cat.category_name}</span>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold text-slate-900">{formatCurrency(cat.total_amount)}</p>
+                        <p className="text-sm font-bold text-slate-900">{formatCurrency(Number(cat.total_amount))}</p>
                         <p className="text-[10px] text-slate-400">{formatPercentage(cat.percentage)} of total</p>
                       </div>
                     </div>
@@ -247,7 +340,7 @@ export default function Reports() {
             </div>
 
             {/* Transaction List */}
-            <div>
+            <div className="report-section">
               <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">Transaction List</h4>
               <div className="border border-slate-100 rounded-lg overflow-hidden">
                 <table className="w-full text-left text-xs">
@@ -268,7 +361,7 @@ export default function Reports() {
                         <td className="px-4 py-3 truncate max-w-[200px]">{t.description}</td>
                         <td className="px-4 py-3">{t.category_name}</td>
                         <td className={`px-4 py-3 text-right font-bold ${t.type === 'inflow' ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {t.type === 'inflow' ? '+' : '-'}{formatCurrency(t.amount)}
+                          {t.type === 'inflow' ? '+' : '-'}{formatCurrency(Number(t.amount))}
                         </td>
                       </tr>
                     ))}
@@ -293,7 +386,7 @@ export default function Reports() {
       )}
 
       {!report && !isLoading && (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-200 border-dashed">
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-200 border-dashed no-print">
           <div className="p-4 bg-slate-50 rounded-full mb-4">
             <FileText className="w-10 h-10 text-slate-300" />
           </div>

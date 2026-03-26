@@ -25,46 +25,46 @@ class ReportService:
         
         # Today
         in_today = await db.scalar(select(func.sum(Transaction.amount)).filter(
-            Transaction.type == TransactionType.INFLOW, Transaction.transaction_date == today
+            Transaction.type == TransactionType.INFLOW, Transaction.transaction_date == today, Transaction.is_deleted == False
         )) or Decimal(0)
         out_today = await db.scalar(select(func.sum(Transaction.amount)).filter(
-            Transaction.type == TransactionType.OUTFLOW, Transaction.transaction_date == today
+            Transaction.type == TransactionType.OUTFLOW, Transaction.transaction_date == today, Transaction.is_deleted == False
         )) or Decimal(0)
         
         # Month
         in_month = await db.scalar(select(func.sum(Transaction.amount)).filter(
-            Transaction.type == TransactionType.INFLOW, Transaction.transaction_date >= month_start
+            Transaction.type == TransactionType.INFLOW, Transaction.transaction_date >= month_start, Transaction.is_deleted == False
         )) or Decimal(0)
         out_month = await db.scalar(select(func.sum(Transaction.amount)).filter(
-            Transaction.type == TransactionType.OUTFLOW, Transaction.transaction_date >= month_start
+            Transaction.type == TransactionType.OUTFLOW, Transaction.transaction_date >= month_start, Transaction.is_deleted == False
         )) or Decimal(0)
         
         # Year
         in_year = await db.scalar(select(func.sum(Transaction.amount)).filter(
-            Transaction.type == TransactionType.INFLOW, Transaction.transaction_date >= year_start
+            Transaction.type == TransactionType.INFLOW, Transaction.transaction_date >= year_start, Transaction.is_deleted == False
         )) or Decimal(0)
         out_year = await db.scalar(select(func.sum(Transaction.amount)).filter(
-            Transaction.type == TransactionType.OUTFLOW, Transaction.transaction_date >= year_start
+            Transaction.type == TransactionType.OUTFLOW, Transaction.transaction_date >= year_start, Transaction.is_deleted == False
         )) or Decimal(0)
         
         # Active Term
         active_term = await db.scalar(select(Term).filter(Term.is_active == True))
         if active_term:
             in_term = await db.scalar(select(func.sum(Transaction.amount)).filter(
-                Transaction.type == TransactionType.INFLOW, Transaction.term_id == active_term.id
+                Transaction.type == TransactionType.INFLOW, Transaction.term_id == active_term.id, Transaction.is_deleted == False
             )) or Decimal(0)
             out_term = await db.scalar(select(func.sum(Transaction.amount)).filter(
-                Transaction.type == TransactionType.OUTFLOW, Transaction.term_id == active_term.id
+                Transaction.type == TransactionType.OUTFLOW, Transaction.term_id == active_term.id, Transaction.is_deleted == False
             )) or Decimal(0)
         else:
             in_term = out_term = Decimal(0)
             
         # Net Balance
-        net_balance = (await db.scalar(select(func.sum(Transaction.amount)).filter(Transaction.type == TransactionType.INFLOW)) or Decimal(0)) - \
-                      (await db.scalar(select(func.sum(Transaction.amount)).filter(Transaction.type == TransactionType.OUTFLOW)) or Decimal(0))
+        net_balance = (await db.scalar(select(func.sum(Transaction.amount)).filter(Transaction.type == TransactionType.INFLOW, Transaction.is_deleted == False)) or Decimal(0)) - \
+                      (await db.scalar(select(func.sum(Transaction.amount)).filter(Transaction.type == TransactionType.OUTFLOW, Transaction.is_deleted == False)) or Decimal(0))
         
         # Recent Transactions
-        recent_query = select(Transaction).order_by(Transaction.created_at.desc()).limit(10)
+        recent_query = select(Transaction).filter(Transaction.is_deleted == False).order_by(Transaction.created_at.desc()).limit(10)
         recent_result = await db.execute(recent_query)
         recent_transactions = recent_result.scalars().all()
         
@@ -77,13 +77,15 @@ class ReportService:
             in_val = await db.scalar(select(func.sum(Transaction.amount)).filter(
                 Transaction.type == TransactionType.INFLOW,
                 Transaction.transaction_date >= target_month,
-                Transaction.transaction_date < next_month
+                Transaction.transaction_date < next_month,
+                Transaction.is_deleted == False
             )) or Decimal(0)
             
             out_val = await db.scalar(select(func.sum(Transaction.amount)).filter(
                 Transaction.type == TransactionType.OUTFLOW,
                 Transaction.transaction_date >= target_month,
-                Transaction.transaction_date < next_month
+                Transaction.transaction_date < next_month,
+                Transaction.is_deleted == False
             )) or Decimal(0)
             
             monthly_cashflow.append(CashFlowPoint(
@@ -114,23 +116,25 @@ class ReportService:
 
     @staticmethod
     async def _get_top_categories(db: AsyncSession, type: TransactionType) -> List[CategoryBreakdown]:
+        # Get total amount for this type to calculate percentages correctly
+        total_amount_query = select(func.sum(Transaction.amount)).filter(Transaction.type == type, Transaction.is_deleted == False)
+        total_amount = await db.scalar(total_amount_query) or Decimal(0)
+
         query = select(
             Category.id, Category.name, func.sum(Transaction.amount)
         ).join(Transaction, Transaction.category_id == Category.id).filter(
-            Transaction.type == type
-        ).group_by(Category.id, Category.name).order_by(func.sum(Transaction.amount).desc()).limit(5)
+            Transaction.type == type, Transaction.is_deleted == False
+        ).group_by(Category.id, Category.name).order_by(func.sum(Transaction.amount).desc()).limit(10)
         
         result = await db.execute(query)
         rows = result.all()
-        
-        total_sum = sum(row[2] for row in rows) if rows else 1
         
         return [
             CategoryBreakdown(
                 category_id=str(row[0]),
                 category_name=row[1],
                 total_amount=row[2],
-                percentage=float((row[2] / total_sum) * 100) if total_sum > 0 else 0
+                percentage=float((row[2] / total_amount) * 100) if total_amount > 0 else 0
             ) for row in rows
         ]
 
@@ -166,17 +170,18 @@ class ReportService:
             
         # Opening balance (sum of all before date_from)
         op_in = await db.scalar(select(func.sum(Transaction.amount)).filter(
-            Transaction.type == TransactionType.INFLOW, Transaction.transaction_date < date_from
+            Transaction.type == TransactionType.INFLOW, Transaction.transaction_date < date_from, Transaction.is_deleted == False
         )) or Decimal(0)
         op_out = await db.scalar(select(func.sum(Transaction.amount)).filter(
-            Transaction.type == TransactionType.OUTFLOW, Transaction.transaction_date < date_from
+            Transaction.type == TransactionType.OUTFLOW, Transaction.transaction_date < date_from, Transaction.is_deleted == False
         )) or Decimal(0)
         opening_balance = op_in - op_out
         
         # Filter transactions
         filters = [
             Transaction.transaction_date >= date_from,
-            Transaction.transaction_date <= date_to
+            Transaction.transaction_date <= date_to,
+            Transaction.is_deleted == False
         ]
         if term_id:
             filters.append(Transaction.term_id == term_id)
@@ -185,32 +190,50 @@ class ReportService:
         elif type == "outflow":
             filters.append(Transaction.type == TransactionType.OUTFLOW)
             
-        query = select(Transaction).filter(and_(*filters)).order_by(Transaction.transaction_date.asc())
+        from sqlalchemy.orm import joinedload
+            
+        query = select(Transaction).options(
+            joinedload(Transaction.category),
+            joinedload(Transaction.term)
+        ).filter(and_(*filters)).order_by(Transaction.transaction_date.asc())
         result = await db.execute(query)
         transactions = result.scalars().all()
         
+        # Populate nested fields for the schema
+        for t in transactions:
+            t.category_name = t.category.name if t.category else "Unknown"
+            t.term_name = t.term.name if t.term else "None"
+        
         # Summary
-        inflows = sum(t.amount for t in transactions if t.type == TransactionType.INFLOW)
-        outflows = sum(t.amount for t in transactions if t.type == TransactionType.OUTFLOW)
+        inflows = sum((t.amount for t in transactions if t.type == TransactionType.INFLOW), Decimal(0))
+        outflows = sum((t.amount for t in transactions if t.type == TransactionType.OUTFLOW), Decimal(0))
         net_pos = inflows - outflows
         closing_balance = opening_balance + net_pos
         
         # Category Breakdown
+        # Determine total amount for percentage calculation
+        if type == "all":
+            # If 'all', use the sum of inflows and outflows for percentage distribution
+            total_amount = inflows + outflows
+        else:
+            # If specific type, use the already calculated sum for that type
+            total_amount = inflows if type == "inflow" else outflows
+        
         cat_query = select(
             Category.id, Category.name, func.sum(Transaction.amount)
         ).join(Transaction, Transaction.category_id == Category.id).filter(
             and_(*filters)
-        ).group_by(Category.id, Category.name)
+        ).group_by(Category.id, Category.name).order_by(func.sum(Transaction.amount).desc())
+        
         cat_result = await db.execute(cat_query)
         cat_rows = cat_result.all()
         
-        total_for_cat = sum(row[2] for row in cat_rows) if cat_rows else 1
         category_breakdown = [
             CategoryBreakdown(
                 category_id=str(row[0]),
                 category_name=row[1],
                 total_amount=row[2],
-                percentage=float((row[2] / total_for_cat) * 100) if total_for_cat > 0 else 0
+                percentage=float((row[2] / total_amount) * 100) if total_amount > 0 else 0
             ) for row in cat_rows
         ]
         
@@ -238,45 +261,56 @@ class ReportService:
     @staticmethod
     async def generate_pdf(report: ReportResponse) -> BytesIO:
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        doc = SimpleDocTemplate(buffer, pagesize=A4, 
+                                rightMargin=30, leftMargin=30, 
+                                topMargin=30, bottomMargin=30)
         elements = []
         styles = getSampleStyleSheet()
         
         # Styles
         title_style = ParagraphStyle(
-            'TitleStyle', parent=styles['Heading1'], alignment=1, fontSize=20, spaceAfter=20
+            'TitleStyle', parent=styles['Heading1'], alignment=1, fontSize=24, spaceAfter=10, textColor=colors.indigo
+        )
+        school_name_style = ParagraphStyle(
+            'SchoolNameStyle', parent=styles['Heading1'], alignment=1, fontSize=20, spaceAfter=5
         )
         sub_title_style = ParagraphStyle(
-            'SubTitleStyle', parent=styles['Heading2'], alignment=1, fontSize=14, spaceAfter=10
+            'SubTitleStyle', parent=styles['Heading2'], alignment=1, fontSize=14, spaceAfter=20, textColor=colors.grey
         )
         section_style = ParagraphStyle(
-            'SectionStyle', parent=styles['Heading3'], fontSize=12, spaceBefore=15, spaceAfter=10
+            'SectionStyle', parent=styles['Heading3'], fontSize=12, spaceBefore=15, spaceAfter=10, textColor=colors.indigo
+        )
+        normal_center = ParagraphStyle(
+            'NormalCenter', parent=styles['Normal'], alignment=1, fontSize=10
         )
         
-        # Cover Page
-        elements.append(Spacer(1, 100))
-        elements.append(Paragraph(settings.SCHOOL_NAME.upper(), title_style))
-        elements.append(Paragraph(report.report_title, sub_title_style))
-        elements.append(Paragraph(f"Period: {report.period}", styles['Normal']))
+        # Report Header (Instead of a full cover page to save space)
+        elements.append(Paragraph(settings.SCHOOL_NAME.upper(), school_name_style))
+        elements.append(Paragraph(settings.SCHOOL_ADDRESS, normal_center))
+        elements.append(Paragraph(f"Tel: {settings.SCHOOL_PHONE}", normal_center))
         elements.append(Spacer(1, 20))
+        
+        elements.append(Paragraph(report.report_title, title_style))
+        elements.append(Paragraph(f"Period: {report.period}", sub_title_style))
         elements.append(Paragraph(f"Generated At: {report.generated_at.strftime('%d %b %Y %H:%M')}", styles['Normal']))
-        elements.append(PageBreak())
+        elements.append(Spacer(1, 20))
         
         # Summary Section
         elements.append(Paragraph("Financial Summary", section_style))
-        data = [
+        summary_data = [
             ["Opening Balance:", f"UGX {report.opening_balance:,.2f}"],
             ["Total Inflows:", f"UGX {report.summary.total_inflows:,.2f}"],
             ["Total Outflows:", f"UGX {report.summary.total_outflows:,.2f}"],
             ["Net Position:", f"UGX {report.summary.net_position:,.2f}"],
             ["Closing Balance:", f"UGX {report.closing_balance:,.2f}"],
         ]
-        t = Table(data, colWidths=[200, 200])
+        t = Table(summary_data, colWidths=[200, 200])
         t.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
+            ('PADDING', (0, 0), (-1, -1), 8),
         ]))
         elements.append(t)
         
@@ -292,37 +326,47 @@ class ReportService:
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('PADDING', (0, 0), (-1, -1), 6),
         ]))
         elements.append(t_cat)
         
-        # Transaction List (Paginated)
-        elements.append(PageBreak())
+        # Transaction List
         elements.append(Paragraph("Transaction Details", section_style))
         
         trans_data = [["Date", "Ref", "Description", "Type", "Amount"]]
         for tr in report.transactions:
             trans_data.append([
-                tr.transaction_date.strftime("%d/%m/%Y"),
+                tr.transaction_date.strftime("%d/%m/%y"),
                 tr.reference_number,
-                tr.description[:30] + "..." if len(tr.description) > 30 else tr.description,
+                tr.description[:40] + "..." if len(tr.description) > 40 else tr.description,
                 tr.type.value.capitalize(),
                 f"{tr.amount:,.2f}"
             ])
             
-        t_trans = Table(trans_data, colWidths=[70, 80, 200, 60, 80], repeatRows=1)
+        t_trans = Table(trans_data, colWidths=[60, 80, 210, 60, 80], repeatRows=1)
         t_trans.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.indigo),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('PADDING', (0, 0), (-1, -1), 4),
         ]))
         elements.append(t_trans)
         
         # Final Footer
-        elements.append(Spacer(1, 50))
-        elements.append(Paragraph("____________________________", styles['Normal']))
-        elements.append(Paragraph("Authorized Signature", styles['Normal']))
+        elements.append(Spacer(1, 40))
+        footer_data = [
+            [Paragraph(f"Generated by: System Administrator<br/>Date: {date.today().strftime('%d %b %Y')}", styles['Normal']), 
+             "", 
+             Paragraph("____________________________<br/>Authorized Signature", styles['Normal'])]
+        ]
+        t_footer = Table(footer_data, colWidths=[180, 100, 180])
+        t_footer.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
+        ]))
+        elements.append(t_footer)
         
         doc.build(elements)
         buffer.seek(0)

@@ -90,9 +90,6 @@ class ReceiptService:
         elements.append(Paragraph(f"Tel: {settings.SCHOOL_PHONE}", styles['Normal']))
         elements.append(Spacer(1, 10))
         
-        elements.append(Paragraph("OFFICIAL RECEIPT", title_style))
-        elements.append(Spacer(1, 5))
-        
         # Receipt Details
         # Load transaction with term to avoid lazy loading issues
         result = await db.execute(
@@ -102,12 +99,18 @@ class ReceiptService:
         )
         transaction = result.scalar_one()
         
+        doc_title = "OFFICIAL RECEIPT" if transaction.type == TransactionType.INFLOW else "PAYMENT VOUCHER"
+        elements.append(Paragraph(doc_title, title_style))
+        elements.append(Spacer(1, 5))
+        
+        payer_label = "Received From:" if transaction.type == TransactionType.INFLOW else "Paid To:"
+        
         data = [
-            ["Receipt No:", receipt.receipt_number, "Date:", transaction.transaction_date.strftime("%d %b %Y")],
-            ["Received From:", receipt.issued_to, "", ""],
+            ["No:", receipt.receipt_number, "Date:", transaction.transaction_date.strftime("%d %b %Y")],
+            [payer_label, receipt.issued_to, "", ""],
             ["Amount:", f"UGX {transaction.amount:,.2f}", "", ""],
             ["In Words:", number_to_words_ugx(float(transaction.amount)), "", ""],
-            ["Payment For:", transaction.description, "", ""],
+            ["Purpose:", transaction.description, "", ""],
             ["Method:", transaction.payment_method.value.replace("_", " ").title(), "Term:", transaction.term.name if transaction.term else "N/A"],
         ]
         

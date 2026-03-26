@@ -97,9 +97,9 @@ export default function TransactionTable({
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8 text-indigo-600 hover:bg-indigo-50"
+                      className={`h-8 w-8 ${t.type === 'inflow' ? 'text-indigo-600 hover:bg-indigo-50' : 'text-red-600 hover:bg-red-50'}`}
                       onClick={() => onPrintReceipt(t.id)}
-                      title="Print Receipt"
+                      title={t.type === 'inflow' ? 'Print Receipt' : 'Print Voucher'}
                     >
                       <Printer className="w-4 h-4" />
                     </Button>

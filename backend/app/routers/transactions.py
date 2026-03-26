@@ -79,10 +79,9 @@ async def create_transaction(
     db.add(transaction)
     await db.flush()
     
-    # Auto-generate receipt for inflows
-    if transaction.type == TransactionType.INFLOW:
-        receipt = await ReceiptService.create_receipt(db, transaction, current_user.id)
-        transaction.receipt_issued = True
+    # Auto-generate receipt/voucher for all transactions
+    receipt = await ReceiptService.create_receipt(db, transaction, current_user.id)
+    transaction.receipt_issued = True
         
     # Log Audit
     audit = AuditLog(
@@ -126,11 +125,11 @@ async def update_transaction(
     for field, value in update_data.items():
         setattr(transaction, field, value)
         
-    # Auto-generate receipt if type changed to INFLOW or if it's an INFLOW without a receipt
-    if transaction.type == TransactionType.INFLOW and not transaction.receipt_issued:
+    # Ensure receipt/voucher exists for all transactions
+    if not transaction.receipt_issued:
         await ReceiptService.create_receipt(db, transaction, current_user.id)
         transaction.receipt_issued = True
-    elif transaction.type == TransactionType.INFLOW and transaction.receipt_issued:
+    elif transaction.receipt_issued:
         # Update receipt recipient if name changed
         if "payer_name" in update_data:
             # Need to load receipt to update it

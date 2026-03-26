@@ -29,6 +29,7 @@ A production-ready, full-stack school accounts management system built with Reac
 - Node.js 20+ (for local development)
 - Python 3.11+ (for local development)
 - MySQL 8 (for local development)
+- Rust (for local development, required for compiling reportlab)
 
 ### Quick Start with Docker
 
