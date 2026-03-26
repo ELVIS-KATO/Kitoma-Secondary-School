@@ -1,3 +1,4 @@
+
 # Kitoma Secondary School Accounts Management System
 
 A production-ready, full-stack school accounts management system built with React, FastAPI, and MySQL.

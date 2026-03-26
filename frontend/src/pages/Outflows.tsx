@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Filter, Download, FileSpreadsheet, TrendingDown } from 'lucide-react';
+import { Plus, Search, Filter, Download, FileSpreadsheet, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import TransactionTable from '@/components/transactions/TransactionTable';
 import client from '@/api/client';
 import { Transaction, PaginatedResponse, Category, Term } from '@/types';
@@ -69,6 +69,56 @@ export default function Outflows() {
     fetchTransactions();
   }, [page, search, categoryId, termId]);
 
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'add') {
+      openAddModal();
+    }
+  }, [searchParams]);
+
+  const openAddModal = () => {
+    setEditingId(null);
+    setFormData({
+      payer_name: '',
+      amount: '',
+      category_id: '',
+      payment_method: 'cash',
+      description: '',
+      transaction_date: new Date().toISOString().split('T')[0],
+      term_id: '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (t: Transaction) => {
+    setEditingId(t.id);
+    setFormData({
+      payer_name: t.payer_name || '',
+      amount: t.amount.toString(),
+      category_id: t.category_id || '',
+      payment_method: t.payment_method || 'cash',
+      description: t.description || '',
+      transaction_date: t.transaction_date || new Date().toISOString().split('T')[0],
+      term_id: t.term_id || '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handlePrintReceipt = async (id: string) => {
+    try {
+      const response = await client.get(`/receipts/transaction/${id}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Voucher_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast.error('Failed to generate payment voucher PDF');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
       try {
@@ -78,6 +128,69 @@ export default function Outflows() {
       } catch (error) {
         toast.error('Failed to delete transaction');
       }
+    }
+  };
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    payer_name: '',
+    amount: '',
+    category_id: '',
+    payment_method: 'cash',
+    description: '',
+    transaction_date: new Date().toISOString().split('T')[0],
+    term_id: '',
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({
+      payer_name: '',
+      amount: '',
+      category_id: '',
+      payment_method: 'cash',
+      description: '',
+      transaction_date: new Date().toISOString().split('T')[0],
+      term_id: '',
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        ...formData,
+        amount: parseFloat(formData.amount),
+        type: 'outflow',
+        term_id: formData.term_id || undefined,
+        category_id: formData.category_id || undefined,
+      };
+      
+      if (editingId) {
+        await client.put(`/transactions/${editingId}`, payload);
+        toast.success('Outflow updated successfully');
+      } else {
+        const response = await client.post('/transactions/', payload);
+        toast.success('Outflow recorded successfully');
+        // Auto-print voucher for new outflows
+        handlePrintReceipt(response.data.id);
+      }
+      
+      closeModal();
+      fetchTransactions();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to record outflow');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -93,12 +206,115 @@ export default function Outflows() {
             <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
             Export CSV
           </Button>
-          <Button className="h-10 bg-red-600 hover:bg-red-700">
+          <Button className="h-10 bg-red-600 hover:bg-red-700" onClick={openAddModal}>
             <Plus className="w-4 h-4 mr-2" />
             Add Outflow
           </Button>
         </div>
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg shadow-2xl border-slate-200">
+            <CardHeader className="border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold">
+                  {editingId ? 'Edit Outflow' : 'Record New Outflow'}
+                </CardTitle>
+                <Button variant="ghost" size="icon" onClick={closeModal}>
+                  <Plus className="w-5 h-5 rotate-45" />
+                </Button>
+              </div>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-sm font-medium text-slate-700">Recipient Name (Paid To)</label>
+                    <Input 
+                      name="payer_name" 
+                      placeholder="e.g. Supplier Name / Staff Name" 
+                      required 
+                      value={formData.payer_name}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Amount (UGX)</label>
+                    <Input 
+                      name="amount" 
+                      type="number" 
+                      placeholder="0.00" 
+                      required 
+                      value={formData.amount}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Category</label>
+                    <select 
+                      name="category_id"
+                      className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                      value={formData.category_id}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Payment Method</label>
+                    <select 
+                      name="payment_method"
+                      className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                      value={formData.payment_method}
+                      onChange={handleInputChange}
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="mobile_money">Mobile Money</option>
+                      <option value="cheque">Cheque</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">School Term</label>
+                    <select 
+                      name="term_id"
+                      className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                      value={formData.term_id}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select Term</option>
+                      {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Description</label>
+                  <textarea 
+                    name="description"
+                    className="w-full h-20 px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Provide details about this payment..."
+                    required
+                    value={formData.description}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </CardContent>
+              <div className="p-6 pt-0 border-t border-slate-100 flex justify-end space-x-3 mt-4">
+                <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
+                <Button type="submit" className="bg-red-600 hover:bg-red-700" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : (editingId ? 'Update Outflow' : 'Save & Print Voucher')}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
 
       {/* Stats Strip */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -107,7 +323,7 @@ export default function Outflows() {
             <div>
               <p className="text-red-600 text-xs font-bold uppercase tracking-wider">Total Filtered Outflows</p>
               <h3 className="text-2xl font-bold text-red-700 mt-1">
-                {formatCurrency(transactions.reduce((acc, curr) => acc + curr.amount, 0))}
+                {formatCurrency(transactions.reduce((acc, curr) => acc + Number(curr.amount), 0))}
               </h3>
             </div>
             <div className="p-2 bg-white rounded-lg text-red-600 shadow-sm">
@@ -131,11 +347,11 @@ export default function Outflows() {
             <div>
               <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Average Outflow</p>
               <h3 className="text-2xl font-bold text-slate-900 mt-1">
-                {total > 0 ? formatCurrency(transactions.reduce((acc, curr) => acc + curr.amount, 0) / (transactions.length || 1)) : 'UGX 0'}
+                {total > 0 ? formatCurrency(transactions.reduce((acc, curr) => acc + Number(curr.amount), 0) / (transactions.length || 1)) : 'UGX 0'}
               </h3>
             </div>
             <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
-              <TrendingDown className="w-5 h-5" />
+              <TrendingUp className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
@@ -189,9 +405,9 @@ export default function Outflows() {
       <TransactionTable 
         transactions={transactions}
         isLoading={isLoading}
-        onEdit={(t) => console.log('Edit', t)}
+        onEdit={handleEdit}
         onDelete={handleDelete}
-        onPrintReceipt={() => {}}
+        onPrintReceipt={handlePrintReceipt}
       />
 
       {/* Pagination */}
