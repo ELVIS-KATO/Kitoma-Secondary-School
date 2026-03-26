@@ -21,7 +21,7 @@ export default function Topbar() {
   };
 
   return (
-    <header className="fixed top-0 right-0 left-64 h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-40">
+    <header className="fixed top-0 right-0 left-64 h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-40 no-print">
       <div className="flex items-center space-x-4">
         <h2 className="text-xl font-bold text-slate-900">{getPageTitle()}</h2>
         <div className="h-6 w-px bg-slate-200 mx-2" />

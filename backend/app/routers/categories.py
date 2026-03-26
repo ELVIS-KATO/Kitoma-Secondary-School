@@ -70,7 +70,7 @@ async def update_category(
 async def delete_category(
     id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_active_accountant)
 ):
     category = await db.get(Category, id)
     if not category:

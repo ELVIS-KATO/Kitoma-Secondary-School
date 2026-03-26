@@ -29,7 +29,7 @@ export default function Sidebar() {
   const { user, logout } = useAuthStore();
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-slate-300 flex flex-col z-50">
+    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-slate-300 flex flex-col z-50 no-print">
       <div className="p-6 flex items-center space-x-3">
         <div className="w-10 h-10 rounded-full ring-2 ring-indigo-200 p-0.5">
         <div className="w-full h-full rounded-full overflow-hidden">
