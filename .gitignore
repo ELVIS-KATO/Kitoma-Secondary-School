@@ -1,21 +1,87 @@
+# =========================
+
 # Environment variables
+
+# =========================
+
 .env
+.env.*
+
+# =========================
 
 # Python
-__pycache__/
+
+# =========================
+
+**pycache**/
 *.pyc
+*.pyo
+*.pyd
+*.sqlite3
 
 # Virtual environments
+
 venv/
 env/
+.venv/
+
+# Python build / packaging
+
+build/
+dist/
+*.egg-info/
+*.spec
+
+# =========================
+
+# Node / Frontend
+
+# =========================
+
+node_modules/
+frontend/node_modules/
+
+# Vite
+
+.vite/
+frontend/node_modules/.vite/
+
+# Build outputs
+
+dist/
+frontend/dist/
 
 # Logs
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 *.log
 
-# Node
-node_modules/
+# =========================
+
+# Electron
+
+# =========================
+
+release/
+*.asar
+
+# =========================
 
 # OS files
+
+# =========================
+
 .DS_Store
 Thumbs.db
+
+# =========================
+
+# Misc
+
+# =========================
+
+coverage/
+.cache/
 temp_readme.md

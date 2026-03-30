@@ -173,19 +173,19 @@ export default function Reports() {
       `}</style>
       <div className="flex items-center justify-between no-print">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Financial Reports</h1>
-          <p className="text-slate-500 text-sm">Generate and export detailed financial statements</p>
+          <h1 className="text-2xl font-bold text-foreground">Financial Reports</h1>
+          <p className="text-muted-foreground text-sm">Generate and export detailed financial statements</p>
         </div>
       </div>
 
       {/* Configuration Panel */}
-      <Card className="shadow-sm border-slate-200 no-print">
+      <Card className="shadow-sm border-border no-print bg-card">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Report Period</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Report Period</label>
               <select 
-                className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full h-11 px-3 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
               >
@@ -197,12 +197,11 @@ export default function Reports() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Term</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Select Term</label>
               <select 
-                className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full h-11 px-3 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={termId}
                 onChange={(e) => setTermId(e.target.value)}
-                disabled={period !== 'termly'}
               >
                 <option value="">Select a term...</option>
                 {terms.map(t => (
@@ -211,9 +210,9 @@ export default function Reports() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Transaction Type</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Transaction Type</label>
               <select 
-                className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full h-11 px-3 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
               >
@@ -223,7 +222,7 @@ export default function Reports() {
               </select>
             </div>
             <Button 
-              className="h-11 bg-indigo-600 hover:bg-indigo-700"
+              className="h-11 bg-primary hover:bg-primary/90 text-primary-foreground"
               onClick={generateReport}
               disabled={isLoading}
             >
@@ -237,19 +236,19 @@ export default function Reports() {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Action Bar */}
           <div className="flex items-center justify-end space-x-3 no-print">
-            <Button variant="outline" className="border-slate-200" onClick={() => window.print()}>
+            <Button variant="outline" className="border-border text-foreground bg-background" onClick={() => window.print()}>
               <Printer className="w-4 h-4 mr-2" /> Print
             </Button>
-            <Button variant="outline" className="border-slate-200" onClick={exportPDF}>
+            <Button variant="outline" className="border-border text-foreground bg-background" onClick={exportPDF}>
               <Download className="w-4 h-4 mr-2" /> PDF Export
             </Button>
-            <Button variant="outline" className="border-slate-200">
+            <Button variant="outline" className="border-border text-foreground bg-background">
               <FileSpreadsheet className="w-4 h-4 mr-2" /> CSV Export
             </Button>
           </div>
 
           {/* Report Content (Printable) */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-8 report-content">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-8 report-content text-slate-900">
             {/* Header */}
             <div className="flex justify-between items-start border-b border-slate-100 pb-8 mb-8">
               <div className="flex items-center space-x-4">
@@ -268,6 +267,7 @@ export default function Reports() {
                 <p className="text-xs text-slate-400 mt-2">Generated At: {formatDate(report.generated_at)}</p>
               </div>
             </div>
+
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 report-section">
@@ -315,7 +315,13 @@ export default function Reports() {
                           const num = Array.isArray(value) ? Number(value[0]) : Number(value);
                           return formatCurrency(Number.isNaN(num) ? 0 : num);
                         }}
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                        contentStyle={{ 
+                          borderRadius: '8px', 
+                          border: '1px solid hsl(var(--border))', 
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                          backgroundColor: 'hsl(var(--card))',
+                          color: 'hsl(var(--foreground))'
+                        }}
                       />
                       <Bar dataKey="total_amount" radius={[0, 4, 4, 0]} barSize={20}>
                         {report.category_breakdown.map((_, index) => (
@@ -394,12 +400,12 @@ export default function Reports() {
       )}
 
       {!report && !isLoading && (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-200 border-dashed no-print">
-          <div className="p-4 bg-slate-50 rounded-full mb-4">
-            <FileText className="w-10 h-10 text-slate-300" />
+        <div className="flex flex-col items-center justify-center py-20 bg-card rounded-xl border border-border border-dashed no-print">
+          <div className="p-4 bg-muted rounded-full mb-4">
+            <FileText className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900">No report generated</h3>
-          <p className="text-slate-500">Configure the period and filters above to generate a financial report</p>
+          <h3 className="text-lg font-bold text-foreground">No report generated</h3>
+          <p className="text-muted-foreground">Configure the period and filters above to generate a financial report</p>
         </div>
       )}
     </div>

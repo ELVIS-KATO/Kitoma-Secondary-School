@@ -76,6 +76,38 @@ A production-ready, full-stack school accounts management system built with Reac
    npm run dev
    ```
 
+## Building Standalone Executable (.exe)
+
+To compile the application into a single installer for Windows:
+
+### 1. Install Build Tools
+Ensure you have Node.js and Python installed, then run:
+```powershell
+# Root directory
+npm install
+
+# Backend directory
+cd backend
+pip install -r requirements.txt
+cd ..
+```
+
+### 2. Run the Build Command
+From the root directory, run:
+```powershell
+npm run build
+```
+This command will:
+- Build the production React frontend.
+- Package the FastAPI backend into `backend.exe`.
+- Bundle everything into a Windows installer.
+
+### 3. Locate the Output
+The installer will be generated in the `release/` folder:
+- `Kitoma Accounts Setup 1.0.0.exe`
+
+*Note: In standalone mode, the app uses a local SQLite database (`kitoma_accounts.db`) automatically.*
+
 ## Default Credentials
 
 - **Admin**: `admin@kitoma.ac.ug` / `Admin@1234`

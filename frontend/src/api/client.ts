@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Detect if we're in an Electron production environment (using file://)
+const isElectronProd = window.location.protocol === 'file:';
+
 const client = axios.create({
-  baseURL: '/api',
+  baseURL: isElectronProd ? 'http://127.0.0.1:8000/api' : '/api',
   headers: {
     'Content-Type': 'application/json',
   },

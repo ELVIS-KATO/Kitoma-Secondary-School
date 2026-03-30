@@ -47,6 +47,8 @@ async def update_school_info(
     await set_setting(db, "school_email", data.email)
     await set_setting(db, "school_phone", data.phone)
     await set_setting(db, "school_address", data.address)
+    if data.logo_url is not None:
+        await set_setting(db, "school_logo", data.logo_url)
     return {"status": "success"}
 
 @router.get("/preferences", response_model=SystemPreferences)

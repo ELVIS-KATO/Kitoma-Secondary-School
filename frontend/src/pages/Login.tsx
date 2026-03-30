@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuthStore } from '@/store/authStore';
+import { useSettingsStore } from '@/store/settingsStore';
 import client from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -22,10 +23,16 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  
+  const { schoolInfo, fetchSettings } = useSettingsStore();
+
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
+
+// import { useEffect } from 'react';
+//   useEffect(() => {
+//     fetchSettings();
+//   }, [fetchSettings]);
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
@@ -64,11 +71,17 @@ export default function Login() {
       >
         <div className="flex flex-col items-center mb-8">
           <div className="w-10 h-10 rounded-full ring-2 ring-indigo-200 p-0.5">
-          <div className="w-full h-full rounded-full overflow-hidden">
-            <img src="/kitoma.jpg" className="w-full h-full object-cover" alt="" />
+            <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-white">
+              {schoolInfo.logo_url ? (
+                <img src={schoolInfo.logo_url} className="w-full h-full object-cover" alt="School logo" />
+              ) : (
+                <span className="text-indigo-600 font-bold text-xs">
+                  {schoolInfo.name.substring(0, 3).toUpperCase()}
+                </span>
+              )}
+            </div>
           </div>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Kitoma Secondary School</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{schoolInfo.name}</h1>
           <p className="text-slate-500">Accounts Management System</p>
         </div>
 

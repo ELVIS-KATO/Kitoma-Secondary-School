@@ -198,15 +198,15 @@ export default function Inflows() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Cash Inflows</h1>
-          <p className="text-slate-500 text-sm">Manage all incoming school funds and receipts</p>
+          <h1 className="text-2xl font-bold text-foreground">Cash Inflows</h1>
+          <p className="text-muted-foreground text-sm">Manage all incoming school funds and receipts</p>
         </div>
         <div className="flex items-center space-x-3">
-          <Button variant="outline" className="h-10 border-slate-200">
+          <Button variant="outline" className="h-10 border-border">
             <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
             Export CSV
           </Button>
-          <Button className="h-10 bg-indigo-600 hover:bg-indigo-700" onClick={openAddModal}>
+          <Button className="h-10 bg-primary hover:bg-primary/90 text-primary-foreground" onClick={openAddModal}>
             <Plus className="w-4 h-4 mr-2" />
             Add Inflow
           </Button>
@@ -215,11 +215,11 @@ export default function Inflows() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg shadow-2xl border-slate-200">
-            <CardHeader className="border-b border-slate-100">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg shadow-2xl border-border">
+            <CardHeader className="border-b border-border/50">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-bold">
+                <CardTitle className="text-xl font-bold text-foreground">
                   {editingId ? 'Edit Inflow' : 'Record New Inflow'}
                 </CardTitle>
                 <Button variant="ghost" size="icon" onClick={closeModal}>
@@ -231,7 +231,7 @@ export default function Inflows() {
               <CardContent className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2">
-                    <label className="text-sm font-medium text-slate-700">Payer Name</label>
+                    <label className="text-sm font-medium text-foreground">Payer Name</label>
                     <Input 
                       name="payer_name" 
                       placeholder="e.g. John Doe / S.1 North" 
@@ -241,7 +241,7 @@ export default function Inflows() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Amount (UGX)</label>
+                    <label className="text-sm font-medium text-foreground">Amount (UGX)</label>
                     <Input 
                       name="amount" 
                       type="number" 
@@ -252,10 +252,10 @@ export default function Inflows() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Category</label>
+                    <label className="text-sm font-medium text-foreground">Category</label>
                     <select 
                       name="category_id"
-                      className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       required
                       value={formData.category_id}
                       onChange={handleInputChange}
@@ -265,10 +265,10 @@ export default function Inflows() {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Payment Method</label>
+                    <label className="text-sm font-medium text-foreground">Payment Method</label>
                     <select 
                       name="payment_method"
-                      className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       required
                       value={formData.payment_method}
                       onChange={handleInputChange}
@@ -280,10 +280,10 @@ export default function Inflows() {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">School Term</label>
+                    <label className="text-sm font-medium text-foreground">School Term</label>
                     <select 
                       name="term_id"
-                      className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       required
                       value={formData.term_id}
                       onChange={handleInputChange}
@@ -294,20 +294,29 @@ export default function Inflows() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Description</label>
+                  <label className="text-sm font-medium text-foreground">Date</label>
+                  <Input 
+                    name="transaction_date" 
+                    type="date" 
+                    required 
+                    value={formData.transaction_date}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Description</label>
                   <textarea 
                     name="description"
-                    className="w-full h-20 px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full h-20 px-3 py-2 rounded-md border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Provide details about this payment..."
-                    required
                     value={formData.description}
                     onChange={handleInputChange}
                   />
                 </div>
               </CardContent>
-              <div className="p-6 pt-0 border-t border-slate-100 flex justify-end space-x-3 mt-4">
+              <div className="p-6 pt-0 border-t border-border/50 flex justify-end space-x-3 mt-4">
                 <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
-                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+                <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
                   {isSubmitting ? 'Saving...' : (editingId ? 'Update Inflow' : 'Save & Issue Receipt')}
                 </Button>
               </div>
@@ -318,39 +327,39 @@ export default function Inflows() {
 
       {/* Stats Strip */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-emerald-50 border-emerald-100 shadow-none">
+        <Card className="bg-emerald-500/10 border-emerald-500/20 shadow-none">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-emerald-600 text-xs font-bold uppercase tracking-wider">Total Filtered Inflows</p>
-              <h3 className="text-2xl font-bold text-emerald-700 mt-1">
+              <p className="text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">Total Filtered Inflows</p>
+              <h3 className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">
                 {formatCurrency(transactions.reduce((acc, curr) => acc + Number(curr.amount), 0))}
               </h3>
             </div>
-            <div className="p-2 bg-white rounded-lg text-emerald-600 shadow-sm">
+            <div className="p-2 bg-background rounded-lg text-emerald-600 shadow-sm">
               <Download className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white border-slate-200 shadow-none">
+        <Card className="bg-card border-border shadow-none">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Transaction Count</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{total}</h3>
+              <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Transaction Count</p>
+              <h3 className="text-2xl font-bold text-foreground mt-1">{total}</h3>
             </div>
-            <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
+            <div className="p-2 bg-muted rounded-lg text-muted-foreground">
               <Filter className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white border-slate-200 shadow-none">
+        <Card className="bg-card border-border shadow-none">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Average Inflow</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">
+              <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Average Inflow</p>
+              <h3 className="text-2xl font-bold text-foreground mt-1">
                 {total > 0 ? formatCurrency(transactions.reduce((acc, curr) => acc + Number(curr.amount), 0) / (transactions.length || 1)) : 'UGX 0'}
               </h3>
             </div>
-            <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
+            <div className="p-2 bg-muted rounded-lg text-muted-foreground">
               <TrendingUp className="w-5 h-5" />
             </div>
           </CardContent>
@@ -358,20 +367,20 @@ export default function Inflows() {
       </div>
 
       {/* Filter Bar */}
-      <Card className="shadow-sm border-slate-200">
+      <Card className="shadow-sm border-border">
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
                 placeholder="Search payer or ref..." 
-                className="pl-10 h-10 border-slate-200 focus:ring-indigo-500"
+                className="pl-10 h-10 border-border focus:ring-primary"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <select 
-              className="h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
             >
@@ -381,7 +390,7 @@ export default function Inflows() {
               ))}
             </select>
             <select 
-              className="h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               value={termId}
               onChange={(e) => setTermId(e.target.value)}
             >
@@ -390,7 +399,7 @@ export default function Inflows() {
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
-            <Button variant="outline" className="h-10 border-slate-200 text-slate-600" onClick={() => {
+            <Button variant="outline" className="h-10 border-border text-foreground" onClick={() => {
               setSearch('');
               setCategoryId('');
               setTermId('');
@@ -413,7 +422,7 @@ export default function Inflows() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-4">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Showing {transactions.length} of {total} transactions
           </p>
           <div className="flex items-center space-x-2">
@@ -431,7 +440,7 @@ export default function Inflows() {
                   key={i}
                   variant={page === i + 1 ? 'default' : 'outline'}
                   size="sm"
-                  className={`w-8 h-8 p-0 ${page === i + 1 ? 'bg-indigo-600' : ''}`}
+                  className={`w-8 h-8 p-0 ${page === i + 1 ? 'bg-primary text-primary-foreground' : ''}`}
                   onClick={() => setPage(i + 1)}
                 >
                   {i + 1}
