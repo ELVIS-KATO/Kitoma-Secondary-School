@@ -44,3 +44,15 @@ async def startup():
     async with engine.begin() as conn:
         # await conn.run_sync(Base.metadata.drop_all) # Careful with this
         await conn.run_sync(Base.metadata.create_all)
+
+if __name__ == "__main__":
+    import uvicorn
+    import sys
+    import os
+    
+    # Handle the case where we're running in a PyInstaller bundle
+    if getattr(sys, 'frozen', False):
+        os.environ["DATABASE_URL"] = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///kitoma_accounts.db")
+        os.environ["SECRET_KEY"] = os.environ.get("SECRET_KEY", "your-secret-key-for-standalone-app")
+    
+    uvicorn.run(app, host="127.0.0.1", port=8000)

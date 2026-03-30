@@ -1,6 +1,8 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
+import { useThemeStore } from './store/themeStore';
+import { useSettingsStore } from './store/settingsStore';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -33,12 +35,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const { fetchMe, isAuthenticated } = useAuthStore();
+  const { theme } = useThemeStore();
+  const { fetchSettings } = useSettingsStore();
   
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchMe();
     }
   }, [isAuthenticated, fetchMe]);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+  }, [theme]);
   
   return (
     <Router>

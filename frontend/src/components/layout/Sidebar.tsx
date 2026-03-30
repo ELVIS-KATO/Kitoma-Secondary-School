@@ -12,6 +12,7 @@ import {
   User as UserIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useSettingsStore } from '@/store/settingsStore';
 import { cn } from '@/utils/cn';
 
 const navItems = [
@@ -27,18 +28,25 @@ const navItems = [
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
+  const { schoolInfo } = useSettingsStore();
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-slate-300 flex flex-col z-50 no-print">
+    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-card text-card-foreground border-r border-border flex flex-col z-50 no-print">
       <div className="p-6 flex items-center space-x-3">
-        <div className="w-10 h-10 rounded-full ring-2 ring-indigo-200 p-0.5">
-        <div className="w-full h-full rounded-full overflow-hidden">
-          <img src="/kitoma.jpg" className="w-full h-full object-cover" alt="Kitoma logo" />
+        <div className="w-10 h-10 rounded-full ring-2 ring-primary p-0.5">
+          <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-primary/10">
+            {schoolInfo.logo_url ? (
+              <img src={schoolInfo.logo_url} className="w-full h-full object-cover" alt="School logo" />
+            ) : (
+              <span className="text-primary font-bold text-xs">
+                {schoolInfo.name.substring(0, 3).toUpperCase()}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
         <div>
-          <h1 className="text-white font-bold text-sm leading-tight">Kitoma Secondary School</h1>
-          <p className="text-xs text-slate-400">Accounts System</p>
+          <h1 className="text-foreground font-bold text-sm leading-tight truncate max-w-[140px]">{schoolInfo.name}</h1>
+          <p className="text-xs text-muted-foreground">Accounts System</p>
         </div>
       </div>
 
@@ -51,8 +59,8 @@ export default function Sidebar() {
               cn(
                 "flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors",
                 isActive 
-                  ? "bg-indigo-600 text-white" 
-                  : "hover:bg-slate-800 hover:text-white"
+                  ? "bg-primary text-primary-foreground" 
+                  : "hover:bg-accent hover:text-accent-foreground"
               )
             }
           >
@@ -62,14 +70,14 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-border">
         <div className="flex items-center space-x-3 mb-4 px-2">
-          <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
-            <UserIcon className="w-6 h-6 text-slate-300" />
+          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+            <UserIcon className="w-6 h-6 text-secondary-foreground" />
           </div>
           <div className="flex-1 overflow-hidden">
-            <p className="text-white text-sm font-medium truncate">{user?.name}</p>
-            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400">
+            <p className="text-foreground text-sm font-medium truncate">{user?.name}</p>
+            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-secondary text-secondary-foreground">
               {user?.role}
             </span>
           </div>
